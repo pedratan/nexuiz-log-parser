@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from optparse import OptionParser
 from weapons import WEAPONS, WEAPON_MOD, STRENGTH, FLAG, SHIELD
-from render import HTMLRender, PlainTextRender
+from render import HTMLRender, PlainTextRender, CSVRender
 
 TEAM_COLOR = {'5': 'Red', '14': 'Blue'}
 HEADER_NAMES = {'name': 'name',
@@ -72,7 +72,6 @@ class NexuizLogParser:
         self.player_nicks = set()
         self.info = []
         self.total = dict()
-        self.average = dict()
         self.logfile_list = []
         self.logline = ''
 
@@ -334,7 +333,6 @@ class NexuizLogParser:
         self._clean_games()
         self._compute_extra_stats()
         self._compute_total()
-        self._compute_average()
 
 
     def _clean_games(self):
@@ -388,28 +386,6 @@ class NexuizLogParser:
                 self.total[pname]['cap_index'] = self.get_cap_index(self.total[pname])
                 self.total[pname]['nemesis'] = self.get_nemesis(self.total[pname])
                 self.total[pname]['rag_doll'] = self.get_rag_doll(self.total[pname])
-
-    def _compute_average(self):
-        stats = ['frags', 'suicide', 'accident', 'tk', 'fckills', 'deaths', 'capture', 'return', 'steal', 'dropped', 'pickup']
-        stats_by_something = ['kills_by_player', 'deaths_by_player', 'kills_by_weapon']
-
-        def av(val, tot):
-            return round(val * 1.0 / tot, 2)
-
-        for pname, player in self.total.items():
-            num = player['games_played']
-            self.average[pname] = {'name': pname, 'team':[], 'games_played': num}
-
-            for stat in stats:
-                self.average[pname][stat] = av(player[stat], num)
-
-            for stat in stats_by_something:
-                self.average[pname][stat] = dict()
-                for key, val in player[stat].items():
-                    self.average[pname][stat][key] = av(val, num)
-
-            for stat, stat_func in self.special_stats.items():
-                self.average[pname][stat] = stat_func(self.average[pname])
 
 
     def _parse_weapon(self, weapon):
@@ -515,7 +491,7 @@ class NexuizLogParser:
             @display_parcial: if set, show info of all games
             @display_total: if set, show summary info
         """
-        options = {'html': HTMLRender, 'txt': PlainTextRender}
+        options = {'html': HTMLRender, 'txt': PlainTextRender, 'csv': CSVRender}
         if output not in options:
             output = 'html'
         render = options[output](header_names=HEADER_NAMES, lnl=self.longest_name_length[display_bot])
@@ -548,11 +524,9 @@ class NexuizLogParser:
 
         if display_total:
             total_players = self._filter_and_sort(self.total.values(), display_bot)
-            average_players = self._filter_and_sort(self.average.values(), display_bot)
             total_data = {
                 'game_number': game_number,
                 'player_stats': self._output_players_scores(render, total_players, table='total'),
-                'average_stats': self._output_players_scores(render, average_players, table='total'),
                 'player_vs_player': self._output_kills_by_player(render, total_players),
             }
             content['total_table'] = render.total(total_data)
@@ -564,7 +538,7 @@ if __name__ == '__main__':
     from players import KNOWN_PLAYER_NICKS
 
     parser = OptionParser(usage='usage: %prog [options] logfile1 [logfile2 logfile3 ...]')
-    parser.add_option("-t", '--type', action="store", help="Type of the output result (html, txt)", default='html', choices=['html', 'txt'])
+    parser.add_option("-t", '--type', action="store", help="Type of the output result (html, txt)", default='html', choices=['html', 'txt', 'csv'])
     parser.add_option("-o", '--output', action="store", help="File to output result.", default='')
     parser.add_option('-b', "--bot", action="store_true", help="Display Bot's results", default=False)
     parser.add_option("--nototal", action="store_false", dest='total', help="Don't display totals", default=True)

@@ -161,3 +161,61 @@ class PlainTextRender(BaseRender):
         output += SEP
 
         return output
+
+class CSVRender(BaseRender):
+
+    def __init__(self, header_names, **kwargs):
+        uppercased_names = dict([(i, n.upper().replace(" ", "_")) for i,n in header_names.items()])
+        super(CSVRender, self).__init__(uppercased_names, **kwargs)
+        lnl = kwargs['lnl']
+        fcl = str(max(lnl, 4) + 1)
+        #self.player_row = "%(name)s,%(frags)s,%(fckills)s,%(tk)s,%(deaths)s,%(suicide)s,%(accident)s,%(steal)s,%(capture)s,%(pickup)s,%(return)s,%(dropped)s,%(pweapon)s,%(last_team)s\n"
+        self.player_row = "%(name)s,%(frags)s,%(fckills)s,%(tk)s,%(deaths)s,%(suicide)s,%(accident)s,%(steal)s,%(capture)s,%(pickup)s,%(return)s,%(dropped)s,%(last_team)s\n"
+        self.total_row = "%(name)s,%(games_played)s,%(frags)s,%(fckills)s,%(tk)s,%(deaths)s,%(suicide)s,%(accident)s,%(steal)s,%(capture)s,%(pickup)s,%(return)s,%(dropped)s\n"
+        self.kills_by_player_row_base = "  %"+str(lnl)+"s"
+
+
+    def game_table_header(self):
+        return ''# self.player_row % self.header_names
+
+    def game_table_row(self, player):
+        return self.player_row % player
+
+    def total_table_header(self):
+        return self.total_row % self.header_names
+
+    def total_table_row(self, player):
+        return self.total_row % player
+
+    def game(self, game_data):
+        output = "%(player_stats)s"
+        #output += "%(player_vs_player)s\n"
+        #output += "%(teams_stats)s\n"
+        return output % game_data
+
+    def base(self, base_data):
+        output = self.player_row % self.header_names
+        output += "%(games_tables)s \n%(total_table)s" % base_data
+        return output
+
+    def kills_by_player_table_header(self, players_name):
+        strf = self.kills_by_player_row_base * (len(players_name)+1)
+        return (strf + "\n") % tuple([self.header_names['killervskilled']]+players_name)
+
+    def kills_by_player_table_row(self, data):
+        strf = self.kills_by_player_row_base * len(data)
+        return (strf + "\n") % tuple(data)
+
+    def teams_table_header(self):
+        return "\n   %(color)s  %(caps)s  %(score)s\n" % self.header_names
+
+    def teams_table_row(self, team):
+        return "   %(color)5s  %(caps)4s  %(score)s\n" % team
+
+    def total(self, total_data):
+        #output = "   TOTAL  N° JUEGOS: %(game_number)s\n" % total_data
+        #output += "%(player_stats)s \n%(player_vs_player)s\n" % total_data
+        output = "%(player_stats)s \n" % total_data
+
+        return output
+
